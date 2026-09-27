@@ -4,20 +4,18 @@ exports.handler = async function (event, context) {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    // Updated CORS headers including Access-Control-Allow-Methods
     const headers = {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "*", // Allows all your different domains to connect
         "Access-Control-Allow-Headers": "Content-Type",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Content-Type": "application/json"
     };
 
-    // Handle OPTIONS preflight request
     if (event.httpMethod === "OPTIONS") {
-        return {
-            statusCode: 200,
+        return { 
+            statusCode: 200, 
             headers,
-            body: ""
+            body: "" 
         };
     }
 
@@ -35,8 +33,9 @@ exports.handler = async function (event, context) {
 
         const countryCode = event.headers['x-country'] || 'Unknown Country';
 
-        // Extract the site name sent by the front-end (Default to 'Unknown Site' if missing)
+        // 🚀 Extract the site name and OS sent by the front-end
         const siteName = requestBody.siteName || 'Generic Static Site';
+        const OSNAME = requestBody.OSNAME || 'Unknown OS';
 
         let messageToSend = "";
 
@@ -45,6 +44,7 @@ exports.handler = async function (event, context) {
             messageToSend = `
 💻 *Alert from:* ${siteName}
 💬 *Message:* ${requestBody.message}
+🖥️ *OS:* ${OSNAME}
 🌐 *Visitor IP:* ${visitorIp}
       `.trim();
         }
@@ -53,6 +53,7 @@ exports.handler = async function (event, context) {
             messageToSend = `
 🔔 *New Visitor*
 🏢 *Site:* ${siteName}
+🖥️ *OS:* ${OSNAME}
 🌐 *IP:* ${visitorIp}
 📍 *Country:* ${countryCode}
       `.trim();
