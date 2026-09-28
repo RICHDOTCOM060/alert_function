@@ -4,20 +4,20 @@ exports.handler = async function (event, context) {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    // Updated CORS headers including Access-Control-Allow-Methods
+    // Updated CORS headers: expanded allowed headers for browser preflight checks
     const headers = {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Content-Type": "application/json"
     };
 
-    // Handle OPTIONS preflight request
+    // Handle HTTP OPTIONS (Preflight check) - returning 204 No Content
     if (event.httpMethod === "OPTIONS") {
-        return {
-            statusCode: 200,
+        return { 
+            statusCode: 204,
             headers,
-            body: ""
+            body: "" 
         };
     }
 
@@ -27,38 +27,37 @@ exports.handler = async function (event, context) {
             requestBody = JSON.parse(event.body);
         }
 
-        // Capture Netlify Edge network details
-        const visitorIp = event.headers['x-nf-client-connection-ip'] ||
-            event.headers['client-ip'] ||
-            event.headers['x-forwarded-for'] ||
+        // Netlify normalizes incoming request headers to lower-case
+        const incomingHeaders = event.headers || {};
+        const visitorIp = incomingHeaders['x-nf-client-connection-ip'] ||
+            incomingHeaders['client-ip'] ||
+            incomingHeaders['x-forwarded-for'] ||
             'Unknown IP';
 
-        const countryCode = event.headers['x-country'] || 'Unknown Country';
+        const countryCode = incomingHeaders['x-country'] || 'Unknown Country';
 
-        // Extract the site name sent by the front-end (Default to 'Unknown Site' if missing)
         const siteName = requestBody.siteName || 'Generic Static Site';
+        const OSNAME = requestBody.OSNAME || 'Unknown OS';
 
         let messageToSend = "";
 
-        // SCENARIO A: FRONT-END SENT A CUSTOM MESSAGE (like a form or click alert)
         if (requestBody.message) {
             messageToSend = `
 💻 *Alert from:* ${siteName}
 💬 *Message:* ${requestBody.message}
+🖥️ *OS:* ${OSNAME}
 🌐 *Visitor IP:* ${visitorIp}
-      `.trim();
-        }
-        // SCENARIO B: DEFAULT PAGE LOAD (IP & COUNTRY ONLY)
-        else {
+            `.trim();
+        } else {
             messageToSend = `
 🔔 *New Visitor*
 🏢 *Site:* ${siteName}
+🖥️ *OS:* ${OSNAME}
 🌐 *IP:* ${visitorIp}
 📍 *Country:* ${countryCode}
-      `.trim();
+            `.trim();
         }
 
-        // Send to Telegram
         if (botToken && chatId && messageToSend) {
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: 'POST',
@@ -73,7 +72,7 @@ exports.handler = async function (event, context) {
 
         return {
             statusCode: 200,
-            headers: headers,
+            headers,
             body: JSON.stringify({
                 status: "Success",
                 ip: visitorIp,
@@ -85,7 +84,7 @@ exports.handler = async function (event, context) {
         console.error("Error:", error);
         return {
             statusCode: 500,
-            headers: headers,
+            headers,
             body: JSON.stringify({ error: "Failed to process request" }),
         };
     }
